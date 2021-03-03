@@ -24,6 +24,7 @@ var rommeyServer = (function() {
 			this.drawBag = [];  // rest of the stones are in the draw bag.
 			this.names = {};    // names of the players (socket id -> name)
 			this.linepos = 14;  // y=14 is where the player area starts
+			this.lines = {}; // lines for marking ... stuff
 		}
 
 		// return an array of all possible stones (1-13, all colors)
@@ -144,16 +145,18 @@ var rommeyServer = (function() {
 		//socket.on('selected', selectedMsg);
 		socket.on('name', nameMsg);
 		socket.on('game', gameMsg);
+		socket.on('lines', linesMsg);
 
 		socket.on('disconnect', function() {
 			game.removePlayer(socket.id);
-	  		socket.broadcast.emit('names', this.names);
+	  		socket.broadcast.emit('names', game.names);
 	   	});
 
 		game.addPlayer(socket.id);
 	
 		// send player's name to all other players
 		socket.emit('names', game.names);
+		socket.emit('lines', game.lines);
 		socket.broadcast.emit('names', game.names);
 
 		// send updated stones to all players
@@ -179,12 +182,19 @@ var rommeyServer = (function() {
 			socket.broadcast.emit('stones', game.stones);
 		}
 
+		function linesMsg(l) {
+			console.log(l);
+			// todo: only send those that get updated
+			game.lines[socket.id] = l;
+			socket.broadcast.emit('lines', game.lines);
+		}
+
 		function gameMsg(s){
 			console.log("gameMsg (" + s + ")")
 			if( s === "allPieces" )
 				stones = game.getAllPieces();
 			else if( s === "restart" )
-				restart();
+				game.restart();
 			else if( s === "draw" ) {
 				game.drawOneStone(socket.id);
 

@@ -16,6 +16,8 @@ var positions = {}
 
 var drag = undefined;
 var mouseStart;
+var markMode = false;
+var globalLines = {};
 
 // we want to draw a new stone from the bag
 // the server will send us a update stone message
@@ -26,6 +28,15 @@ function drawStone() {
 
 function restart() {
 	socket.emit('game', 'restart');
+}
+
+function flipMarkMode() {
+	markMode = !markMode;
+	document.getElementById("markMode").innerText = markMode ? "Normaler Modus" : "Zeichenmodus";
+	if(!markMode) {
+		lines = [];
+		socket.emit('lines', lines);
+	}
 }
 
 // name has changed, so send to server and save to localStorage
@@ -79,6 +90,7 @@ function setup() {
 		names = n;
 		document.getElementById("players").innerHTML = escapeHtml( Object.values(names).toString() )
 	} );
+	socket.on('lines', (l) => { globalLines = l; } );
 
 	let cnv = createCanvas(800,1000);
 	cnv.parent('myContainer');
@@ -109,9 +121,17 @@ function stoneHit(stone, mx, my) {
 	  		p.x == stone.x && p.y == stone.y;
 }
 
+lines = []
+var currentLine;
+
 // function to handle mousePressed
 function mousePressed() {
-	mouseStart = {x1:mouseX, y1: mouseY}; // used for keeping track of dragging/marking
+	mouseStart = {x1:mouseX, y1: mouseY}; // used for keeping track of dragging/marking	
+	if(markMode) {
+		currentLine = [{x:mouseX, y:mouseY}];
+		lines.push(currentLine);
+		return;
+	}
 
 	if(selectedStones !== undefined) {
 		// check if we pressed the mouse on an already selected stone
@@ -207,6 +227,10 @@ function dropSelectedStones()
 // mouse press released
 // either drop selected stones or finish selection with mark box
 function mouseReleased() {
+	currentLine = undefined;
+	if(markMode) {
+		return;
+	}
 	sendMouse();
 
 	if(selectedStones !== undefined) {
@@ -231,6 +255,11 @@ function mouseMoved() {
 }
 
 function mouseDragged() {
+	if(markMode && currentLine !== undefined) {
+		currentLine.push({x:mouseX, y:mouseY});
+		socket.emit('lines', lines);
+	}
+
 	if(drag !== undefined) {
 		drag.x2 = mouseX;
 		drag.y2 = mouseY;
@@ -322,10 +351,30 @@ function getName(id)
   	}
 }
 
+function drawLines(Lines) {
+	for(i in Lines) {
+		var lastpos = undefined;
+		for(p in Lines[i]) {
+			if(lastpos !== undefined)
+				line( lastpos.x, lastpos.y, Lines[i][p].x, Lines[i][p].y);
+			lastpos = Lines[i][p];
+		}
+	}
+}
+
 // main drawing function
 function draw()
 {
 	clear();
+	var i = 0;
+	for( var key in globalLines ) {
+		// var a = i*34509+48790;
+		// stroke(a %200, (a/200) %200, (a/(200*200)) %200);
+		// i++;
+		drawLines(globalLines[key])
+	}
+	drawLines(lines);
+
 
 	// draw separator player area
 	line(0, dx*linepos, 1000, dx*linepos);
