@@ -5,7 +5,6 @@ You can drag pieces, and get black, blue, red, yellow pieces 1-13.
 TODO:
 - Check that pieces are placed in a "correct" position (e.g. 5,6,7 or 7,7,7 but not 5,6,6).
 - Automatically calculate and display sum of selected items
-- When drawing a stone, shouldn't place the stone on top of another stone.
 
 # with server
 start server + connect with client:

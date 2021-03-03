@@ -23,6 +23,7 @@ var rommeyServer = (function() {
 			this.stones = [];   // here goes the stones that have been drawn
 			this.drawBag = [];  // rest of the stones are in the draw bag.
 			this.names = {};    // names of the players (socket id -> name)
+			this.linepos = 14;  // y=14 is where the player area starts
 		}
 
 		// return an array of all possible stones (1-13, all colors)
@@ -59,7 +60,7 @@ var rommeyServer = (function() {
 				let stone = this.drawStoneFromBag();
 				if( stone === undefined ) break;
 				stone.x = i;           // x position
-				stone.y = 14;          // y position
+				stone.y = this.linepos;          // y position
 				stone.playerarea = id; // this marks stones as only visible by this player
 				this.stones.push(stone);
 			}
@@ -79,14 +80,34 @@ var rommeyServer = (function() {
 			}
 		}
 
+		// return true if there's already a stone at this position
+		alreadyStoneHere(gridpos, id) {
+			return this.stones.some( s => {
+							if( gridpos.y >= this.linepos && s.playerarea != id )
+								return false;
+							return s.x == gridpos.x && s.y == gridpos.y;
+						} )
+		}
+
+
 		// draw one stone for a player
 		drawOneStone(id)
 		{
 			let stone = this.drawStoneFromBag();
-			stone.x = 15;
-			stone.y = 14;
-			stone.playerarea = id;
-			this.stones.push(stone);
+			if(stone === undefined) return;
+			stone.playerarea = id;			
+
+			for(var y=this.linepos; y<20; y++) {
+				for(var x=0; x<19; x++)
+					if( this.stones.every( s => !this.alreadyStoneHere({x:x, y:y}, id) )  )
+					{
+						stone.x = x;
+						stone.y = y;
+						this.stones.push(stone);
+						return;
+					}
+				}
+			
 		}
 
 		// new player: add to names list, draw stones.
