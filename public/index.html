@@ -1,0 +1,21 @@
+<html>
+  <head>
+  	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.11/p5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.11/addons/p5.dom.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.11/addons/p5.sound.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js"></script>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+  	Rummey! 
+	<label for="fname">Name:</label> <input type="text" id="name" name="name" onchange="changeName()"><br><br>
+
+  	<button id="restart" onclick="restart()">neustart/restart</button><br><br>
+  	<label id="players">Players: </label><br><br>
+
+  	<button id="draw" onclick="drawStone()">draw/ziehen</button>
+  	<div id="myContainer"></div>
+    <script src="sketch.js"></script>
+
+  </body>
+</html>
