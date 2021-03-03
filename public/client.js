@@ -12,12 +12,13 @@ var linepos = 14;
 var names;
 
 var selectedStones = undefined
+var positions = {}
 
-function allPieces()
-{
-	socket.emit('game', 'restart');
-}
+var drag = undefined;
+var mouseStart;
 
+// we want to draw a new stone from the bag
+// the server will send us a update stone message
 function drawStone() {
 	socket.emit('game', 'draw');
 }
@@ -27,6 +28,7 @@ function restart() {
 	socket.emit('game', 'restart');
 }
 
+// name has changed, so send to server and save to localStorage
 function changeName() {
 	var name = document.getElementById("name").value;
 	socket.emit('name', name);
@@ -36,15 +38,8 @@ function changeName() {
 		localStorage.name = name
 	}
 }
-function stonesMsg(s){
-	stones = s;
-}
 
-// function selectedMsg(s){
-// 	stones[s.selectedIdx] = s.stone;
-// 	positions[s.id] = s;
-// }
-
+// ask for an option (default taken from localStorage), and save in localStorage
 function promptLocalStore(msg, name, default_) {
 	var n = default_;
 	if (typeof(Storage) !== "undefined") {
@@ -60,8 +55,8 @@ function promptLocalStore(msg, name, default_) {
 	
 }
 
-
-function setup(){
+// main setup function
+function setup() {
 	const queryString = window.location.search;
 	const urlParams = new URLSearchParams(queryString);
 	var server, name;
@@ -76,18 +71,21 @@ function setup(){
 	document.getElementById("name").value = name
 	socket = io.connect("http://" + server + ":3000");
 	
-	socket.on('stones', stonesMsg);
-	// socket.on('selected', selectedMsg);
-	socket.on('mouse', mouseMsg);
-	socket.on('names', namesMsg);
+	socket.on('stones', (s) => { stones = s; });
+	socket.on('mouse', (pos) => { positions[pos.id] = pos; } );
+	socket.on('names', (n) => {
+		console.log("names:");
+		console.log(n);
+		names = n;
+		document.getElementById("players").innerHTML = escapeHtml( Object.values(names).toString() )
+	} );
+
 	let cnv = createCanvas(800,1000);
 	cnv.parent('myContainer');
 
 	changeName();
 	//background(0);
 }
-
-var positions = {}
 
 function escapeHtml(unsafe) {
     return unsafe
@@ -98,42 +96,28 @@ function escapeHtml(unsafe) {
          .replace(/'/g, "&#039;");
  }
 
-function namesMsg(n) {
-	console.log("names:");
-	console.log(n);
-	names = n;
-	document.getElementById("players").innerHTML = escapeHtml( Object.values(names).toString() )
-}
-
-function mouseMsg(pos) {
-	positions[pos.id] = pos;
-	// console.log(pos);
-	// console.log(getName(pos.id));
-}
 
 function posToGrid(x, y)
 {
 	return {x:((x - d)/dx )| 0, y:((y - d)/dx  ) | 0};
 }
 
-
+// return true if the position mx, my is within stone's boundary
 function stoneHit(stone, mx, my) {
 	var p = posToGrid(mx, my);
 	return (stone.playerarea == 0 || stone.playerarea == socket.id) &&
 	  		p.x == stone.x && p.y == stone.y;
 }
 
-var drag = undefined;
-var mouseStart;
+// function to handle mousePressed
 function mousePressed() {
-	mouseStart = {x1:mouseX, y1: mouseY};
+	mouseStart = {x1:mouseX, y1: mouseY}; // used for keeping track of dragging/marking
 
 	if(selectedStones !== undefined) {
 		// check if we pressed the mouse on an already selected stone
 		var hit = selectedStones.some( stone => stoneHit(stone, mouseX, mouseY) );
 		if( !hit )
 			selectedStones = undefined;
-		console.log("mousePressed 2");
 	}
   	if(selectedStones === undefined) {
   		// one-click direct select
@@ -143,11 +127,13 @@ function mousePressed() {
 	}
 
 	if(selectedStones === undefined) {
+		// starting a drag
 		drag = {x1:mouseX, y1: mouseY};
 	}
   
 }
 
+// send mouse position to server (so that other clients can display people's arrows)
 function sendMouse() {	
 	socket.emit('mouse', {x:mouseX, y:mouseY});
 }
@@ -173,18 +159,21 @@ function getDraggedStonePos(stone) {
 	return {x:x, y:y}
 }
 
-function alreadyStoneHere(pos) {
+// return true if there's already a stone at this position
+function alreadyStoneHere(gridpos) {
 	return stones.some( s => {
-					if( pos.y >= linepos && s.playerarea != socket.id )
+					if( gridpos.y >= linepos && s.playerarea != socket.id )
 						return false;
-					return s.x == pos.x && s.y == pos.y;
+					return s.x == gridpos.x && s.y == gridpos.y;
 				} )
 }
 
-function outsideOfArea(pos) {
-	return pos.x < 0 || pos.y < 0 || pos.x > 19 || pos.y > 17;
+// return true if gridpos is out of game area
+function outsideOfArea(gridpos) {
+	return gridpos.x < 0 || gridpos.y < 0 || gridpos.x > 19 || gridpos.y > 17;
 }
 
+// stones have been dragged somewhere and now want to be dropped there
 function dropSelectedStones()
 {
 	// check if the drop is valid
@@ -199,7 +188,7 @@ function dropSelectedStones()
 			else
 				return true;
 		} ))
-	 return;
+	 return; // not valid -> abort drop
 				
 	// assign final positions
 	selectedStones.forEach( stone => {
@@ -215,17 +204,8 @@ function dropSelectedStones()
 	socket.emit('stones', stones);
 }
 
-function endMarkProcess()
-{
-	selectedStones = stones.filter( stone => isStoneIncluded(stone, drag) )
-	if(selectedStones.length == 0)
-		selectedStones = undefined;			
-
-	drag = undefined;
-
-	console.log(selectedStones);	
-}
-
+// mouse press released
+// either drop selected stones or finish selection with mark box
 function mouseReleased() {
 	sendMouse();
 
@@ -235,7 +215,14 @@ function mouseReleased() {
 	mouseStart = undefined
 	
 	if(drag !== undefined) {
-		endMarkProcess();
+		// we dragged the mouse, so the mark box is finished
+		// now get which stones are included in mark box
+		selectedStones = stones.filter( stone => isStoneIncluded(stone, drag) )
+		if(selectedStones.length == 0)
+			selectedStones = undefined;
+
+		drag = undefined;
+		console.log(selectedStones);	
 	}
 }
 
@@ -256,6 +243,8 @@ function touchMoved() {
 		return false;
 	else return true;
 }
+
+//// ------------ drawing ------------ ////
 
 function drawstone(stone)
 {
@@ -333,7 +322,7 @@ function getName(id)
   	}
 }
 
-
+// main drawing function
 function draw()
 {
 	clear();
