@@ -3,8 +3,8 @@
   	<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.11/p5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.11/addons/p5.dom.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.11/addons/p5.sound.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.0.4/socket.io.js"></script> -->
+    <link rel="stylesheet" href="public/style.css">
   </head>
   <body>
   	Rummey! 
@@ -15,7 +15,9 @@
 
   	<button id="draw" onclick="drawStone()">draw/ziehen</button>
   	<div id="myContainer"></div>
-    <script src="client.js"></script>
+    <script src="rommeyServer.js"></script>
+    <script src="local_io.js"></script>
+    <script src="public/client.js"></script>
 
   </body>
 </html>

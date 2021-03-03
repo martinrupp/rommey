@@ -45,10 +45,37 @@ function stonesMsg(s){
 // 	positions[s.id] = s;
 // }
 
-function setup(){
-	document.getElementById("name").value = prompt("Please enter your name", localStorage?.name);
+function promptLocalStore(msg, name, default_) {
+	var n = default_;
+	if (typeof(Storage) !== "undefined") {
+		if(localStorage[name] !== undefined)
+			n = localStorage[name];
+		var n = prompt(msg, n);
+		localStorage[name] = n;
+		return n;
+	}
+	else {
+		return prompt(msg, n);
+	}
+	
+}
 
-	socket = io.connect("http://192.168.178.50:3000");
+
+function setup(){
+	const queryString = window.location.search;
+	const urlParams = new URLSearchParams(queryString);
+	var server, name;
+	var server = localStorage?.server;
+	var name = localStorage?.name;
+	
+	// open with local.html?skipPrompts to skip prompts
+	if( !urlParams.has('skipPrompts') ) {
+		server = promptLocalStore("Please enter server", "server", "localhost")
+		name = promptLocalStore("Please enter your name", "name", "Player1")
+	}
+	document.getElementById("name").value = name
+	socket = io.connect("http://" + server + ":3000");
+	
 	socket.on('stones', stonesMsg);
 	// socket.on('selected', selectedMsg);
 	socket.on('mouse', mouseMsg);
