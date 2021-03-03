@@ -20,6 +20,8 @@ open http://localhost:3000
 Then, use server = `localhost` and a name.
 
 # local mode
+Online: [https://martinrupp.github.io/rommey/local.html?skipPrompts](https://martinrupp.github.io/rommey/local.html?skipPrompts) .
+
 If you don't have a node installation or want to avoid server/client, you can use "local" mode, just
 `open local.html` with your browser.
 
